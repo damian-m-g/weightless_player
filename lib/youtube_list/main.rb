@@ -28,7 +28,7 @@ class Main
       exit(1)
     else
       @youtube_player = YouTubePlayer.new(@song_list)
-      puts('Playing them.')
+      puts('Playing songs...')
       @youtube_player.play_songs()
       puts('The whole list has been played, thanks for listening.')
       sleep(60)

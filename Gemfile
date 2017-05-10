@@ -1,12 +1,12 @@
-ruby '2.3.1'
+ruby '2.3.3'
 
 source 'https://rubygems.org'
 
 group :development do
   gem 'rake'
+  gem 'bundler'
 end
 
 group :production do
-  gem 'bundler', '1.14.0.pre.1'
-  gem 'watir', '6.1.0'
+  gem 'watir', '6.2.1'
 end

@@ -1,29 +1,29 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    childprocess (0.5.9)
+    childprocess (0.7.0)
       ffi (~> 1.0, >= 1.0.11)
-    ffi (1.9.14-x86-mingw32)
-    rake (11.2.2)
-    rubyzip (1.2.0)
-    selenium-webdriver (3.0.5)
+    ffi (1.9.18-x86-mingw32)
+    rake (12.0.0)
+    rubyzip (1.2.1)
+    selenium-webdriver (3.4.0)
       childprocess (~> 0.5)
       rubyzip (~> 1.0)
       websocket (~> 1.0)
-    watir (6.1.0)
+    watir (6.2.1)
       selenium-webdriver (~> 3.0)
-    websocket (1.2.3)
+    websocket (1.2.4)
 
 PLATFORMS
   x86-mingw32
 
 DEPENDENCIES
-  bundler (= 1.14.0.pre.1)
+  bundler
   rake
-  watir (= 6.1.0)
+  watir (= 6.2.1)
 
 RUBY VERSION
-   ruby 2.3.1p112
+   ruby 2.3.3p222
 
 BUNDLED WITH
-   1.14.0.pre.1
+   1.14.6

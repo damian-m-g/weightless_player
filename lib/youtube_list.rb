@@ -1,5 +1,7 @@
 # external libraries
 require 'watir'
+require 'fileutils'
+require 'stringio'
 
 # source code
 require_relative '../lib/youtube_list/main'
@@ -15,7 +17,7 @@ else
   begin
     system('title YouTube Lister')
     # for thesting purpose use File.absolute_path('./test') as argument of next method
-    Main.new(File.absolute_path('./test'))
+    Main.new()
   rescue RuntimeError => e
     warn(e.message)
     warn(e.backtrace)
