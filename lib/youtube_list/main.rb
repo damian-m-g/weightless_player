@@ -4,8 +4,12 @@ class Main
   SUPPORTED_FILES = ['m3u8', 'txt']
 
   # @param wd [String].
-  def initialize(wd = File.absolute_path(File.dirname(ENV['OCRA_EXECUTABLE'])))
-    puts('Hello user, welcome.')
+  def initialize(wd)
+    # derive standard and error output, so the chromedriver writes to a random place
+    $original_stdout = $stdout
+    $stdout = StringIO.new()
+    $stderr = StringIO.new()
+    $original_stdout.puts('Hello user, welcome.')
     $wd = wd #: String
 
     path = get_youtube_list_file() #: String or NilClass
@@ -21,16 +25,16 @@ class Main
     end
 
     @song_list = @interpreter.get_song_list #: Array of Song
-    puts("#{@song_list.size} songs detected.")
+    $original_stdout.puts("#{@song_list.size} song/s detected.")
     if(@song_list.empty?)
-      puts('Exiting in 10 seconds.')
+      $original_stdout.puts('Exiting in 10 seconds.')
       sleep(10)
       exit(1)
     else
       @youtube_player = YouTubePlayer.new(@song_list)
-      puts('Playing songs...')
+      $original_stdout.puts('Playing song/s...')
       @youtube_player.play_songs()
-      puts('The whole list has been played, thanks for listening.')
+      $original_stdout.puts('The whole list has been played, thanks for listening.')
       sleep(60)
     end
   end

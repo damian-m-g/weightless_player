@@ -6,6 +6,9 @@ class YouTubePlayer
   ADBLOCK_LOCATION = "#{DATA_LOCATION}/adblockpluschrome.crx"
   CHROMEDRIVER_LOCATION = "#{DATA_LOCATION}/chromedriver.exe"
   TARGET_CHROMEDRIVER_PLACEMENT = "#{ENV['APPDATA'].gsub('\\', '/')}/JorobusLab/YouTubeLister"
+  AMOUNT_OF_PLAYABLES_TO_INSPECT = 3
+  # minutes from where a playable item is recognized as an album
+  KNOWN_AS_SONG_LIMIT = 20
 
   # @param song_list [Array]. At least there's one song in the list, thats assured.
   def initialize(song_list)
@@ -13,17 +16,20 @@ class YouTubePlayer
     place_chromedriver_in_c()
     add_chromedriver_to_path()
     # we don't want undesirable logs
+=begin
+    # in the waitr version used this is not working, output is still going to $stdout
     logger = Selenium::WebDriver.logger
     logger.level = :fatal
     logger.output = "#{TARGET_CHROMEDRIVER_PLACEMENT}/log.log"
+=end
     # set and start the browser
     profile = Selenium::WebDriver::Chrome::Profile.new()
     # activate addblock extension
     profile.add_extension(ADBLOCK_LOCATION)
     profile['extensions.disabled'] = false
-    puts('Initializing driver, ignore warnings...')
+    $original_stdout.puts('Initializing driver, ignore warnings...')
     webdriver = Selenium::WebDriver.for(:chrome, profile: profile)
-    puts('Cleaning console...')
+    $original_stdout.puts('Cleaning browser, ignore (or manually close) adblocker pop-up...')
     @browser = Watir::Browser.start(YOUTUBE_URL, webdriver)
     # there could be more than one windows (tabs) opened, let just one on top
     if(@browser.windows.size > 1)
@@ -31,7 +37,6 @@ class YouTubePlayer
       @browser.windows.first.use
     end
     sleep(0.75)
-    system('cls')
   end
 
   # Opens Chrome instance, travel to YouTube, seek for songs, and reproduce them.
@@ -45,32 +50,31 @@ class YouTubePlayer
       @browser.button(:class, 'search-button').click
       # wait a while for the page to get loaded
       sleep(1)
-      # inquire on the first appearance
-      first_appearance = @browser.h3(:class, 'yt-lockup-title')
-      # check if this is in fact the looked song
-      first_appearance_text = first_appearance.text #: String
-      if((first_appearance_text.match(Regexp.new(Regexp.escape(song.artist), true))) && (first_appearance_text.match(Regexp.new(Regexp.escape(song.song), true))))
-        # perfect, a HQ song has been probably found, reproduce it
-        puts("Playing: \"#{song.to_s}\".")
-        @browser.h3(:class, 'yt-lockup-title').click
+      # get first three titles
+      h3s = @browser.h3s(:class, 'yt-lockup-title').to_a.first(AMOUNT_OF_PLAYABLES_TO_INSPECT)
+      # try to find a proper hq playable
+      proper_playable = find_proper_playable(song, h3s) #: Fixnum or NilClass
+      if(proper_playable)
+        # play it
+        $original_stdout.puts("Playing: \"#{song.to_s}\".")
+        h3s[proper_playable].click
       else
-        # seems that for HQ there's no song, try to find a non-HQ
+        # try to find just a proper playable
         string_for_searcher = get_string_for_searcher(song, hq: false) #: String
         @browser.text_field.value = string_for_searcher #: String
         @browser.button(:class, 'search-button').click
         # wait a while for the page to get loaded
         sleep(1)
-        # inquire on the first appearance
-        first_appearance = @browser.h3(:class, 'yt-lockup-title')
-        # check if this is in fact the looked song
-        first_appearance_text = first_appearance.text #: String
-        if((first_appearance_text.match(Regexp.new(Regexp.escape(song.artist), true))) && (first_appearance_text.match(Regexp.new(Regexp.escape(song.song), true))))
-          # not a HQ but works, reproduce it
-          puts("Playing: \"#{song.to_s}\".")
-          @browser.h3(:class, 'yt-lockup-title').click
+        # get first three titles
+        h3s = @browser.h3s(:class, 'yt-lockup-title').to_a.first(AMOUNT_OF_PLAYABLES_TO_INSPECT)
+        proper_playable = find_proper_playable(song, h3s) #: Fixnum or NilClass
+        if(proper_playable)
+          # play it
+          $original_stdout.puts("Playing: \"#{song.to_s}\".")
+          h3s[proper_playable].click
         else
           # woops, no song found, go with the next one
-          puts("Mmm... seems that there's no \"#{song.to_s}\" in YT (or I'm not very wise), skipping...")
+          $original_stdout.puts("Mmm... seems that there's no \"#{song.to_s}\" in YT (or I'm not very wise), skipping...")
           next
         end
       end
@@ -87,6 +91,33 @@ class YouTubePlayer
   end
 
   private
+
+  # @param song [Song], @param titles [Array]. @return [Fixnum or NilClass]. Find a proper playable for a specific *song* among several *titles*. Note that *titles* are "h3" elements gathered by Watir.
+  def find_proper_playable(song, titles)
+    titles.each_with_index do |title, index|
+      title_text = title.text
+      if((title_text.match(Regexp.new(Regexp.escape(song.artist), true))) && (title_text.match(Regexp.new(Regexp.escape(song.song), true))))
+        # looks like the song artist and the name of the song is on the title, see if "live" isn't included
+        if(!((!(song.artist.match(/live/i))) && (!(song.song.match(/live/i))) && (title_text.match(/live/i))))
+          # everything is good by now, check if the title doesn't belong to an album
+          _duration = title.parent.parent.span(class: 'video-time').text rescue nil #: String
+          match = _duration.match(/(\d{0,2}):?(\d{1,2}):(\d{2})\z/) #: Integer or NilClass
+          if(match)
+            total_minutes = 0
+            hours_as_minutes = match[1] != '' ? (Integer(match[1]) * 60) : 0
+            total_minutes += hours_as_minutes
+            minutes = Integer(match[2])
+            total_minutes += minutes
+            if(total_minutes && (total_minutes <= KNOWN_AS_SONG_LIMIT))
+              # perfect, a playable has matched the requirements
+              return(index)
+            end
+          end
+        end
+      end
+    end
+    nil
+  end
 
   # @param string [Song], @param hq [TrueClass or FalseClass]. @return [String].
   def get_string_for_searcher(song, hq: true)
