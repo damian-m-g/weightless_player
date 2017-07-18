@@ -10,5 +10,9 @@ v0.5.0 => 2017/06/28 => * Songs that get mischosen due to having the same name a
 v0.6.0 => 2017/07/02 => * Window name fixed, now correctly displays "Weightless Player".
                         * Fixed bug that made reproduce albums instead of songs.
                         * Fixed issue that caused chromedriver to spit debugging output into the app window, standard (and error) output has been redirected.
-                        
-                               
+v0.7.0 => 2017/07/18 => * Several bugfixes.
+                        * Now every time something gets written to the console, its whole content gets wiped and re-written (getting riddle of verbosity thrown by the webdriver (couldn't avoid this :/)).
+                        * Webdriver version updated, probably fastest response.
+                        * Adblock version updated (from 1.13.2.1785 to 1.13.3.1791).
+                        * Now the app successfully doesn't get closed when finishes reproducing the whole list. Instead it leaves on the automatic playing system of YouTube.
+                        * Improved evasion of live performance (prioritizing high quality and studio performances).

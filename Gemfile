@@ -8,5 +8,5 @@ group :development do
 end
 
 group :production do
-  gem 'watir', '6.2.1'
+  gem 'watir', '6.4.2'
 end

@@ -5,11 +5,9 @@ class Main
 
   # @param wd [String].
   def initialize(wd)
-    # derive standard and error output, so the chromedriver writes to a random place
-    $original_stdout = $stdout
-    $stdout = StringIO.new()
-    $stderr = StringIO.new()
-    $original_stdout.puts('Hello user, welcome.')
+    # a logger will be in charge of be logging information to the console
+    $logger = YouTubeList::Logger.new()
+    $logger.puts('Hello user, welcome.')
     $wd = wd #: String
 
     path = get_youtube_list_file() #: String or NilClass
@@ -25,16 +23,17 @@ class Main
     end
 
     @song_list = @interpreter.get_song_list #: Array of Song
-    $original_stdout.puts("#{@song_list.size} song/s detected.")
+    $logger.puts("#{@song_list.size} song/s detected.")
     if(@song_list.empty?)
-      $original_stdout.puts('Exiting in 10 seconds.')
+      $logger.puts('Exiting in 10 seconds.')
       sleep(10)
       exit(1)
     else
       @youtube_player = YouTubePlayer.new(@song_list)
-      $original_stdout.puts('Playing song/s...')
+      $logger.puts('Playing song/s...')
       @youtube_player.play_songs()
-      $original_stdout.puts('The whole list has been played, thanks for listening.')
+      $logger.puts('The whole list has been played, thanks for listening.')
+      $logger.puts('The player will let YouTube reproduce related songs automatically...')
       sleep(60)
     end
   end

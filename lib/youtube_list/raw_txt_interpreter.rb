@@ -9,10 +9,10 @@ class RawTXTInterpreter < SongListInterpreter
     file_content = File.open(@list_path, 'r:utf-8:utf-8') do |f|
       f.each_line do |line|
         stripped_line = line.strip #: String
-        if(stripped_line != '')
-          m = stripped_line.match(/(.*)\s*-\s*(.*)/)
+        if((stripped_line != '') && (stripped_line[0] != '#'))
+          m = stripped_line.match(/(.*)\s*?-\s*(.*)/)
           if(m)
-            list << Song.new(m[1], m[2])
+            list << Song.new(m[1].strip, m[2].strip)
           end
         end
       end

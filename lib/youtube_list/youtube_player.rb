@@ -27,9 +27,9 @@ class YouTubePlayer
     # activate addblock extension
     profile.add_extension(ADBLOCK_LOCATION)
     profile['extensions.disabled'] = false
-    $original_stdout.puts('Initializing driver, ignore warnings...')
+    $logger.puts('Initializing driver, ignore warnings...')
     webdriver = Selenium::WebDriver.for(:chrome, profile: profile)
-    $original_stdout.puts('Cleaning browser, ignore (or manually close) adblocker pop-up...')
+    $logger.puts('Cleaning browser, ignore (or manually close) adblocker pop-up...')
     @browser = Watir::Browser.start(YOUTUBE_URL, webdriver)
     # there could be more than one windows (tabs) opened, let just one on top
     if(@browser.windows.size > 1)
@@ -43,38 +43,60 @@ class YouTubePlayer
   def play_songs
     @song_list.each do |song|
       # travel to YouTube if not there yet
-      if(!@browser.url.match('youtube')) then(@browser.goto(YOUTUBE_URL); sleep(1)) end
+      if(!@browser.url.match('youtube')) then(@browser.goto(YOUTUBE_URL)) end
+      # check if important elements are loaded, otherwise wait for them
+      ready = false
+      until(ready)
+        if(@browser.text_field.visible?)
+          ready = true
+          sleep(0.75)
+        end
+      end
       # the song is formatted with a '-' dividing artist and song, format it accordly for this task. Try to get HQ song first
       string_for_searcher_hq = get_string_for_searcher(song, hq: true) #: String
       @browser.text_field.value = string_for_searcher_hq #: String
       @browser.button(:class, 'search-button').click
-      # wait a while for the page to get loaded
-      sleep(1)
-      # get first three titles
-      h3s = @browser.h3s(:class, 'yt-lockup-title').to_a.first(AMOUNT_OF_PLAYABLES_TO_INSPECT)
+      # wait until important elements gets loaded
+      ready = false
+      until(ready)
+        h3s = @browser.h3s(:class, 'yt-lockup-title').to_a
+        if((h3s.size >= 3) && (h3s[2].visible?))
+          ready = true
+          sleep(0.75)
+        end
+      end
+      # first three titles are really needed
+      h3s = h3s.first(AMOUNT_OF_PLAYABLES_TO_INSPECT)
       # try to find a proper hq playable
       proper_playable = find_proper_playable(song, h3s) #: Fixnum or NilClass
       if(proper_playable)
         # play it
-        $original_stdout.puts("Playing: \"#{song.to_s}\".")
+        $logger.puts("Playing: \"#{song.to_s}\".")
         h3s[proper_playable].click
       else
         # try to find just a proper playable
         string_for_searcher = get_string_for_searcher(song, hq: false) #: String
         @browser.text_field.value = string_for_searcher #: String
         @browser.button(:class, 'search-button').click
-        # wait a while for the page to get loaded
-        sleep(1)
+        # wait until important elements gets loaded
+        ready = false
+        until(ready)
+          h3s = @browser.h3s(:class, 'yt-lockup-title').to_a
+          if((h3s.size >= 3) && (h3s[2].visible?))
+            ready = true
+            sleep(0.75)
+          end
+        end
         # get first three titles
-        h3s = @browser.h3s(:class, 'yt-lockup-title').to_a.first(AMOUNT_OF_PLAYABLES_TO_INSPECT)
+        h3s = h3s.first(AMOUNT_OF_PLAYABLES_TO_INSPECT)
         proper_playable = find_proper_playable(song, h3s) #: Fixnum or NilClass
         if(proper_playable)
           # play it
-          $original_stdout.puts("Playing: \"#{song.to_s}\".")
+          $logger.puts("Playing: \"#{song.to_s}\".")
           h3s[proper_playable].click
         else
           # woops, no song found, go with the next one
-          $original_stdout.puts("Mmm... seems that there's no \"#{song.to_s}\" in YT (or I'm not very wise), skipping...")
+          $logger.puts("Mmm... seems that there's no \"#{song.to_s}\" in YT (or I'm not very wise), skipping...")
           next
         end
       end
@@ -84,7 +106,7 @@ class YouTubePlayer
         if(progress_bar.style.match(/transform: scaleX\(1\)/))
           break
         else
-          sleep(1)
+          sleep(0.5)
         end
       end
     end
@@ -97,14 +119,14 @@ class YouTubePlayer
     titles.each_with_index do |title, index|
       title_text = title.text
       if((title_text.match(Regexp.new(Regexp.escape(song.artist), true))) && (title_text.match(Regexp.new(Regexp.escape(song.song), true))))
-        # looks like the song artist and the name of the song is on the title, see if "live" isn't included
-        if(!((!(song.artist.match(/live/i))) && (!(song.song.match(/live/i))) && (title_text.match(/live/i))))
+        # looks like the song artist and the name of the song is on the title, see if "live" (and else) isn't included
+        if((!((!(song.artist.match(/live/i))) && (!(song.song.match(/live/i))) && (title_text.match(/live/i)))) && (!(title_text.match(/(?:(?:\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})|(?:\d{2,4}[\/-]\d{1,2}[\/-]\d{1,2}))/))))
           # everything is good by now, check if the title doesn't belong to an album
           _duration = title.parent.parent.span(class: 'video-time').text rescue nil #: String
-          match = _duration.match(/(\d{0,2}):?(\d{1,2}):(\d{2})\z/) #: Integer or NilClass
+          match = _duration.match(/(?:(\d{0,2}):)?(\d{1,2}):(\d{2})\z/) #: Integer or NilClass
           if(match)
             total_minutes = 0
-            hours_as_minutes = match[1] != '' ? (Integer(match[1]) * 60) : 0
+            hours_as_minutes = ((match[1] != nil) && (match[1] != '')) ? (Integer(match[1]) * 60) : 0
             total_minutes += hours_as_minutes
             minutes = Integer(match[2])
             total_minutes += minutes

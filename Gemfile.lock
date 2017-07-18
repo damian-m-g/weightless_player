@@ -10,7 +10,7 @@ GEM
       childprocess (~> 0.5)
       rubyzip (~> 1.0)
       websocket (~> 1.0)
-    watir (6.2.1)
+    watir (6.4.2)
       selenium-webdriver (~> 3.0)
     websocket (1.2.4)
 
@@ -20,7 +20,7 @@ PLATFORMS
 DEPENDENCIES
   bundler
   rake
-  watir (= 6.2.1)
+  watir (= 6.4.2)
 
 RUBY VERSION
    ruby 2.4.1p111

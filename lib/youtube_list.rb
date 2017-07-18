@@ -1,9 +1,9 @@
 # external libraries
 require 'watir'
 require 'fileutils'
-require 'stringio'
 
 # source code
+require_relative '../lib/youtube_list/logger'
 require_relative '../lib/youtube_list/main'
 require_relative '../lib/youtube_list/song'
 require_relative '../lib/youtube_list/song_list_interpreter'
