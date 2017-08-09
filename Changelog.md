@@ -16,3 +16,4 @@ v0.7.0 => 2017/07/18 => * Several bugfixes.
                         * Adblock version updated (from 1.13.2.1785 to 1.13.3.1791).
                         * Now the app successfully doesn't get closed when finishes reproducing the whole list. Instead it leaves on the automatic playing system of YouTube.
                         * Improved evasion of live performance (prioritizing high quality and studio performances).
+v0.8.0 => 2017/08/08 => * Now the app successfully holds "forever" after the list gets totally reproduced.

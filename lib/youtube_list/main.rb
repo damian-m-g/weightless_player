@@ -34,7 +34,7 @@ class Main
       @youtube_player.play_songs()
       $logger.puts('The whole list has been played, thanks for listening.')
       $logger.puts('The player will let YouTube reproduce related songs automatically...')
-      sleep(60)
+      while(true); end
     end
   end
 
