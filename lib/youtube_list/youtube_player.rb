@@ -7,6 +7,8 @@ class YouTubePlayer
   CHROMEDRIVER_LOCATION = "#{DATA_LOCATION}/chromedriver.exe"
   TARGET_CHROMEDRIVER_PLACEMENT = "#{ENV['APPDATA'].gsub('\\', '/')}/JorobusLab/YouTubeLister"
   AMOUNT_OF_PLAYABLES_TO_INSPECT = 3
+  SEARCH_BUTTON_IDENTIFICATION = {key: :id, value: 'search-icon-legacy'}
+  SONG_TITLE_IDENTIFICATION = {key: :id, value: 'title-wrapper'}
   # minutes from where a playable item is recognized as an album
   KNOWN_AS_SONG_LIMIT = 20
 
@@ -16,19 +18,18 @@ class YouTubePlayer
     place_chromedriver_in_c()
     add_chromedriver_to_path()
     # we don't want undesirable logs
-=begin
-    # in the waitr version used this is not working, output is still going to $stdout
     logger = Selenium::WebDriver.logger
     logger.level = :fatal
     logger.output = "#{TARGET_CHROMEDRIVER_PLACEMENT}/log.log"
-=end
     # set and start the browser
-    profile = Selenium::WebDriver::Chrome::Profile.new()
-    # activate addblock extension
-    profile.add_extension(ADBLOCK_LOCATION)
-    profile['extensions.disabled'] = false
+    args = ['disable-infobars']
+    options = Selenium::WebDriver::Chrome::Options.new(args: args)
+    options.add_extension(ADBLOCK_LOCATION)
     $logger.puts('Initializing driver, ignore warnings...')
-    webdriver = Selenium::WebDriver.for(:chrome, profile: profile)
+    webdriver = Selenium::WebDriver.for(:chrome, options: options)
+    # move the window out of sight as quick as you can
+    point = Selenium::WebDriver::Point.new(-4000, 0)
+    webdriver.manage.window.position = point
     $logger.puts('Cleaning browser, ignore (or manually close) adblocker pop-up...')
     @browser = Watir::Browser.start(YOUTUBE_URL, webdriver)
     # there could be more than one windows (tabs) opened, let just one on top
@@ -36,7 +37,13 @@ class YouTubePlayer
       @browser.windows.last.close
       @browser.windows.first.use
     end
-    sleep(0.75)
+    # give some time for the tab to get closed
+    sleep(0.5)
+    # use autoit to hide the window (nor in the bar will appear)
+    @au3 = AutoItX3.new
+    @au3.hide_browser
+    # wait for a moment so the page gets loaded
+    sleep(0.25)
   end
 
   # Opens Chrome instance, travel to YouTube, seek for songs, and reproduce them.
@@ -47,7 +54,7 @@ class YouTubePlayer
       # check if important elements are loaded, otherwise wait for them
       ready = false
       until(ready)
-        if(@browser.text_field.visible?)
+        if(@browser.text_field.visible? rescue nil)
           ready = true
           sleep(0.75)
         end
@@ -55,45 +62,85 @@ class YouTubePlayer
       # the song is formatted with a '-' dividing artist and song, format it accordly for this task. Try to get HQ song first
       string_for_searcher_hq = get_string_for_searcher(song, hq: true) #: String
       @browser.text_field.value = string_for_searcher_hq #: String
-      @browser.button(:class, 'search-button').click
+      @browser.button(SEARCH_BUTTON_IDENTIFICATION[:key], SEARCH_BUTTON_IDENTIFICATION[:value]).click
       # wait until important elements gets loaded
       ready = false
       until(ready)
-        h3s = @browser.h3s(:class, 'yt-lockup-title').to_a
-        if((h3s.size >= 3) && (h3s[2].visible?))
+        tries = 0
+        begin
+          divs = @browser.divs(SONG_TITLE_IDENTIFICATION[:key], SONG_TITLE_IDENTIFICATION[:value]).to_a
+        rescue
+          if(tries == 0)
+            sleep(0.5)
+            tries += 1
+            retry
+          else
+            @browser.refresh
+            _ready = false
+            until(_ready)
+              if(@browser.text_field.visible? rescue nil)
+                _ready = true
+                sleep(0.75)
+              end
+            end
+            tries += 1
+            retry
+          end
+        end
+        if((divs.size >= 3) && (divs[2].visible?))
           ready = true
           sleep(0.75)
         end
       end
       # first three titles are really needed
-      h3s = h3s.first(AMOUNT_OF_PLAYABLES_TO_INSPECT)
+      divs = divs.first(AMOUNT_OF_PLAYABLES_TO_INSPECT)
       # try to find a proper hq playable
-      proper_playable = find_proper_playable(song, h3s) #: Fixnum or NilClass
+      proper_playable = find_proper_playable(song, divs) #: Fixnum or NilClass
       if(proper_playable)
         # play it
         $logger.puts("Playing: \"#{song.to_s}\".")
-        h3s[proper_playable].click
+        divs[proper_playable].click
       else
         # try to find just a proper playable
         string_for_searcher = get_string_for_searcher(song, hq: false) #: String
         @browser.text_field.value = string_for_searcher #: String
-        @browser.button(:class, 'search-button').click
+        @browser.button(SEARCH_BUTTON_IDENTIFICATION[:key], SEARCH_BUTTON_IDENTIFICATION[:value]).click
         # wait until important elements gets loaded
         ready = false
         until(ready)
-          h3s = @browser.h3s(:class, 'yt-lockup-title').to_a
-          if((h3s.size >= 3) && (h3s[2].visible?))
+          tries = 0
+          begin
+            divs = @browser.divs(SONG_TITLE_IDENTIFICATION[:key], SONG_TITLE_IDENTIFICATION[:value]).to_a
+          rescue
+            if(tries == 0)
+              sleep(0.5)
+              tries += 1
+              retry
+            else
+              @browser.refresh
+              _ready = false
+              until(_ready)
+                if(@browser.text_field.visible? rescue nil)
+                  _ready = true
+                  sleep(0.75)
+                end
+              end
+              tries += 1
+              retry
+            end
+          end
+          if((divs.size >= 3) && (divs[2].visible?))
             ready = true
             sleep(0.75)
           end
         end
         # get first three titles
-        h3s = h3s.first(AMOUNT_OF_PLAYABLES_TO_INSPECT)
-        proper_playable = find_proper_playable(song, h3s) #: Fixnum or NilClass
+        divs = divs.first(AMOUNT_OF_PLAYABLES_TO_INSPECT)
+        proper_playable = find_proper_playable(song, divs) #: Fixnum or NilClass
         if(proper_playable)
           # play it
           $logger.puts("Playing: \"#{song.to_s}\".")
-          h3s[proper_playable].click
+          divs[proper_playable].click
         else
           # woops, no song found, go with the next one
           $logger.puts("Mmm... seems that there's no \"#{song.to_s}\" in YT (or I'm not very wise), skipping...")
@@ -122,7 +169,7 @@ class YouTubePlayer
         # looks like the song artist and the name of the song is on the title, see if "live" (and else) isn't included
         if((!((!(song.artist.match(/live/i))) && (!(song.song.match(/live/i))) && (title_text.match(/live/i)))) && (!(title_text.match(/(?:(?:\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})|(?:\d{2,4}[\/-]\d{1,2}[\/-]\d{1,2}))/))))
           # everything is good by now, check if the title doesn't belong to an album
-          _duration = title.parent.parent.span(class: 'video-time').text rescue nil #: String
+          _duration = title.parent.parent.parent.span.text rescue nil #: String
           match = _duration.match(/(?:(\d{0,2}):)?(\d{1,2}):(\d{2})\z/) #: Integer or NilClass
           if(match)
             total_minutes = 0
@@ -155,6 +202,8 @@ class YouTubePlayer
   def place_chromedriver_in_c
     if(!(Dir.exists?(File.dirname(TARGET_CHROMEDRIVER_PLACEMENT)))) then(Dir.mkdir(File.dirname(TARGET_CHROMEDRIVER_PLACEMENT))) end
     if(!(Dir.exists?(TARGET_CHROMEDRIVER_PLACEMENT))) then(Dir.mkdir(TARGET_CHROMEDRIVER_PLACEMENT)) end
-    if(!(File.exists?(target_placement = "#{TARGET_CHROMEDRIVER_PLACEMENT}/chromedriver.exe"))) then(FileUtils.copy_file(CHROMEDRIVER_LOCATION, target_placement)) end
+    # erase any previous chromedriver version
+    if(!(File.exists?(target_placement = "#{TARGET_CHROMEDRIVER_PLACEMENT}/chromedriver.exe"))) then(File.delete(target_placement)) end
+    FileUtils.copy_file(CHROMEDRIVER_LOCATION, target_placement)
   end
 end

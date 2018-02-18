@@ -1,6 +1,12 @@
 # external libraries
+require 'selenium-webdriver'
 require 'watir'
+require 'fox16'; include Fox
+require 'fox16/colors'
+
+# standard libraries
 require 'fileutils'
+require 'win32ole'
 
 # source code
 require_relative '../lib/youtube_list/logger'
@@ -10,6 +16,8 @@ require_relative '../lib/youtube_list/song_list_interpreter'
 require_relative '../lib/youtube_list/m3u8_interpreter'
 require_relative '../lib/youtube_list/raw_txt_interpreter'
 require_relative '../lib/youtube_list/youtube_player'
+require_relative '../lib/youtube_list/autoitx3'
+require_relative '../lib/youtube_list/v_fxpainter'
 
 # ocra execution preventer
 if(defined?(Ocra))
@@ -21,7 +29,9 @@ else
   rescue StandardError, NoMemoryError, SystemStackError => e
     ## SPECIAL CASE BEGIN
     # I dont want to show errors to ppl
+=begin
     exit!()
+=end
     ## SPECIAL CASE END
     warn('')
     warn("Error: #{e.class}.")
