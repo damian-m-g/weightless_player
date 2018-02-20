@@ -11,4 +11,5 @@ group :production do
   gem 'selenium-webdriver'
   gem 'watir'
   gem 'fxruby', require: 'fox16'
+  gem 'win32-mutex', require: 'win32/mutex'
 end

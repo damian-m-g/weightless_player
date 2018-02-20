@@ -15,29 +15,50 @@ class AutoItX3
   # Find the browser handler, and hide it.
   def hide_browser
     # acquire window handler if needed
-    if(!@window_handler)
-      acquire_window_handler()
+    if(!@browser_handler)
+      acquire_browser_handler()
     end
-    @server.WinSetState(@window_handler, '', SW_HIDE)
+    @server.WinSetState(@browser_handler, '', SW_HIDE)
   end
 
-  # Shows the browser if it's hidden. Is supposed that @window_handler was already acquired.
+  # Shows the browser if it's hidden. Is supposed that @browser_handler was already acquired.
   def show_browser
-    @server.WinSetState(@window_handler, '', SW_SHOW)
+    @server.WinSetState(@browser_handler, '', SW_SHOW)
   end
 
+  def hide_chromedriver_console
+    # acquire window handler if needed
+    if(!@chromedriver_console_handler)
+      acquire_chromedriver_console_handler()
+    end
+    @server.WinSetState(@chromedriver_console_handler, '', SW_HIDE)
+  end
+  
   private
 
-  # Force the acquirement of the corresponding @window_handler. Ovewrite existing if exists.
-  def acquire_window_handler
+  # Force the acquirement of the corresponding @browser_handler. Ovewrite existing if exists.
+  def acquire_browser_handler
     # priority is to hide it quicker as you can
     if(@server.WinWait(BROWSER_WINDOW_NAME, '', HIDING_TIMEOUT) == 1)
       # connection has been made, get handler
       pseudo_handle = @server.WinGetHandle(BROWSER_WINDOW_NAME)
-      @window_handler = "[HANDLE:#{pseudo_handle}]" #: String
+      @browser_handler = "[HANDLE:#{pseudo_handle}]" #: String
     else
       # connection couldn't be made
       raise(RuntimeError, "AutoItX3 can't find '#{BROWSER_WINDOW_NAME}' window.")
+    end
+  end
+
+  # Force the acquirement of the corresponding @chromedriver_console_handler. Ovewrite existing if exists.
+  def acquire_chromedriver_console_handler
+    # priority is to hide it quicker as you can
+    if(@server.WinWait((window_name = "#{YouTubePlayer::TARGET_CHROMEDRIVER_PLACEMENT.gsub('/', '\\')}\\chromedriver.exe"), '', HIDING_TIMEOUT) == 1)
+      # connection has been made, get handler
+      pseudo_handle = @server.WinGetHandle(window_name)
+      @chromedriver_console_handler = "[HANDLE:#{pseudo_handle}]" #: String
+    else
+      # connection couldn't be made
+      raise(RuntimeError, "AutoItX3 can't find '#{window_name}' window.")
     end
   end
 end

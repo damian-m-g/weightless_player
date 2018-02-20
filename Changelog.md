@@ -17,3 +17,19 @@ v0.7.0 => 2017/07/18 => * Several bugfixes.
                         * Now the app successfully doesn't get closed when finishes reproducing the whole list. Instead it leaves on the automatic playing system of YouTube.
                         * Improved evasion of live performance (prioritizing high quality and studio performances).
 v0.8.0 => 2017/08/08 => * Now the app successfully holds "forever" after the list gets totally reproduced.
+v1.0.0 => 2018/02/20 => * Automatic playing after a playlist gets totally played is disabled for now.
+                        * Webdrivers updated to latest versions, including Adblock extension.
+                        * A mutex system has been added, so you can't open more than one instance of the app and cause probable troubles. Also helps to the installers and updaters of the app, making it aware if the app is opened, making it cancel the process.
+                        * Bugfixes.
+                        * This major version brings a totally new way of dealing with the app.
+                          * Graphic User Interface.
+                          * Select the folder containing your playlists.
+                          * Visualize all your playlists inside the GUI.
+                          * Visualize the content of each playlist.
+                          * Play, stop, and pause playlists.
+                          * Manage the volume from the GUI itself.
+                          * No longer dealing with a chrome instance, runs hidden.
+                        * Known issues: They volume may go up at a random moment (isn't sure that will happen) for a very short moment (miliseconds). If this happens to you and annoys you, just set the volume at 100% and manage it from your local main volume. Will be fixed in the next version.
+                        
+
+                          

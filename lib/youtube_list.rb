@@ -3,6 +3,9 @@ require 'selenium-webdriver'
 require 'watir'
 require 'fox16'; include Fox
 require 'fox16/colors'
+require 'win32/mutex'
+# the only purpose the next line is here is for Ocra, that can't detect it (it's used for himself or other gems) if you don't require it
+require 'mini_portile2'
 
 # standard libraries
 require 'fileutils'
@@ -17,6 +20,7 @@ require_relative '../lib/youtube_list/m3u8_interpreter'
 require_relative '../lib/youtube_list/raw_txt_interpreter'
 require_relative '../lib/youtube_list/youtube_player'
 require_relative '../lib/youtube_list/autoitx3'
+require_relative '../lib/youtube_list/v_gui'
 require_relative '../lib/youtube_list/v_fxpainter'
 
 # ocra execution preventer
@@ -24,12 +28,18 @@ if(defined?(Ocra))
   exit()
 else
   begin
-    system('title Weightless Player')
-    Main.new(ARGV.first || File.absolute_path(File.dirname(ENV['OCRA_EXECUTABLE'])))
+    begin
+      mx = Win32::Mutex.new(true, 'Weightless Player', false)
+      mx.wait
+      system('title Weightless Player')
+      Main.new(ARGV.first || File.absolute_path(File.dirname(ENV['OCRA_EXECUTABLE'])))
+    ensure
+      mx.release
+    end
   rescue StandardError, NoMemoryError, SystemStackError => e
     ## SPECIAL CASE BEGIN
-    # I dont want to show errors to ppl
 =begin
+    # I dont want to show errors to ppl
     exit!()
 =end
     ## SPECIAL CASE END
@@ -38,7 +48,5 @@ else
     warn("Message: #{e.message}.")
     warn("Backtrace: #{e.backtrace.inspect}.")
     warn('Please take a screen-capture and send it to the programmer.')
-    sleep(60)
-    exit()
   end
 end
