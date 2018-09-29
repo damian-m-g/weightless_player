@@ -32,17 +32,15 @@ else
       mx = Win32::Mutex.new(true, 'Weightless Player', false)
       mx.wait
       system('title Weightless Player')
-      Main.new(ARGV.first || File.absolute_path(File.dirname(ENV['OCRA_EXECUTABLE'])))
+      Main.new(wd: ARGV.first || File.absolute_path(File.dirname(ENV['OCRA_EXECUTABLE'])), browser_hidden: (ARGV[1] == 'false' ? false : true))
     ensure
       mx.release
     end
   rescue StandardError, NoMemoryError, SystemStackError => e
-    ## SPECIAL CASE BEGIN
-=begin
-    # I dont want to show errors to ppl
-    exit!()
-=end
-    ## SPECIAL CASE END
+    # ATTENTION: SPECIAL CASE BEGIN
+    # you'll want to comment the next line if you're debugging. Currently there's no good way to show errors to people, for now is better to just exit
+    exit()
+    # ATTENTION: SPECIAL CASE ENDS
     warn('')
     warn("Error: #{e.class}.")
     warn("Message: #{e.message}.")

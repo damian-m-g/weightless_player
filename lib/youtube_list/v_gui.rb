@@ -4,7 +4,7 @@ require_relative '../../lib/youtube_list/v_fxpainter'
 
 class GUI
 
-  APP_NAME = 'Weightless Player'
+  APP_NAME = 'Weightless Player 1.0.0-beta.1'
   VENDOR_NAME = 'JorobusLab'
   ASSETS_PLACEMENTS = "#{File.dirname(File.dirname(File.dirname(__FILE__)))}/data"
   PATH_TO_DESKTOP = "C:/Users/#{ENV['user']}/Desktop"
@@ -377,6 +377,7 @@ class GUI
       artist = @song_being_reproduced[:song].artist
       song = @song_being_reproduced[:song].song
       index_of_next_song = nil
+      # FIXME: If a song is repeated in the playlist, this next will fail to do what's supposed to do
       songs.each_with_index do |_song, index|
         if((_song.artist == artist) && (_song.song == song))
           index_of_next_song = index + 1

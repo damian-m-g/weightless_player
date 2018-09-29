@@ -3,19 +3,19 @@ class YouTubePlayer
 
   YOUTUBE_URL = 'https://www.youtube.com/'
   DATA_LOCATION = "#{File.dirname(File.dirname(File.dirname(__FILE__)))}/data"
-  ADBLOCK_LOCATION = "#{DATA_LOCATION}/adblockpluschrome.crx"
+  ADBLOCK_LOCATION = "#{DATA_LOCATION}/adblockchrome.crx"
   CHROMEDRIVER_LOCATION = "#{DATA_LOCATION}/chromedriver.exe"
   TARGET_CHROMEDRIVER_PLACEMENT = "#{ENV['APPDATA'].gsub('\\', '/')}/JorobusLab/YouTubeLister"
   AMOUNT_OF_PLAYABLES_TO_INSPECT = 3
-  SEARCH_BUTTON_IDENTIFICATION = {key: :id, value: 'search-icon-legacy'}
-  SONG_TITLE_IDENTIFICATION = {key: :id, value: 'title-wrapper'}
+  SEARCH_BUTTON_IDENTIFICATION = 'search-icon-legacy'
+  SONG_TITLE_IDENTIFICATION = 'title-wrapper'
   # minutes from where a playable item is recognized as an album
   KNOWN_AS_SONG_LIMIT = 20
 
   attr_writer :song_list
 
   # Initializes the browser instance, hidding it.
-  def initialize
+  def initialize(browser_hidden = true)
     place_chromedriver_in_c()
     add_chromedriver_to_path()
     # we don't want undesirable logs
@@ -28,8 +28,10 @@ class YouTubePlayer
     options.add_extension(ADBLOCK_LOCATION)
     webdriver = Selenium::WebDriver.for(:chrome, options: options)
     # move the window out of sight as quick as you can
-    point = Selenium::WebDriver::Point.new(-4000, 0)
-    webdriver.manage.window.position = point
+    if(browser_hidden)
+      point = Selenium::WebDriver::Point.new(-4000, 0)
+      webdriver.manage.window.position = point
+    end
     @browser = Watir::Browser.start(YOUTUBE_URL, webdriver)
     # there could be more than one windows (tabs) opened, let just one on top
     if(@browser.windows.size > 1)
@@ -38,12 +40,12 @@ class YouTubePlayer
     end
     # give some time for the tab to get closed
     sleep(0.5)
-    # use autoit to hide some windows (nor in the bar will appear)
+    # use autoit to hide some windows if needed (nor in the bar will appear)
     @au3 = AutoItX3.new
     # hide the chromedriver.exe console output, if appeared
     @au3.hide_chromedriver_console rescue nil
     # hide the browser
-    @au3.hide_browser
+    @au3.hide_browser if browser_hidden
     # wait for a moment so the page gets loaded
     sleep(0.25)
   end
@@ -62,7 +64,7 @@ class YouTubePlayer
     # check if important elements are loaded, otherwise wait for them
     ready = false
     until(ready)
-      if(@browser.text_field.visible? rescue nil)
+      if(@browser.text_field.present? rescue nil)
         ready = true
         sleep(0.75)
       end
@@ -70,14 +72,14 @@ class YouTubePlayer
     # the song is formatted with a '-' dividing artist and song, format it accordly for this task. Try to get HQ song first
     string_for_searcher_hq = get_string_for_searcher(song, hq: true) #: String
     @browser.text_field.value = string_for_searcher_hq #: String
-    @browser.button(SEARCH_BUTTON_IDENTIFICATION[:key], SEARCH_BUTTON_IDENTIFICATION[:value]).click
+    @browser.button(id: SEARCH_BUTTON_IDENTIFICATION).click
     # wait until important elements gets loaded
     ready = false
     until(ready)
       tries = 0
       begin
         sleep(0.5)
-        divs = @browser.divs(SONG_TITLE_IDENTIFICATION[:key], SONG_TITLE_IDENTIFICATION[:value]).to_a
+        divs = @browser.divs(id: SONG_TITLE_IDENTIFICATION).to_a
       rescue
         if(tries == 0)
           sleep(0.5)
@@ -87,7 +89,7 @@ class YouTubePlayer
           @browser.refresh
           _ready = false
           until(_ready)
-            if(@browser.text_field.visible? rescue nil)
+            if(@browser.text_field.present? rescue nil)
               _ready = true
               sleep(0.75)
             end
@@ -96,7 +98,7 @@ class YouTubePlayer
           retry
         end
       end
-      if((divs.size >= 3) && (divs[2].visible?))
+      if((divs.size >= 3) && (divs[2].present?))
         ready = true
         sleep(0.25)
       end
@@ -111,7 +113,7 @@ class YouTubePlayer
       # disable automatic reproduction if needed
       if(!@automatic_reproduction_disabled)
         sleep(0.75)
-        @browser.div(:id, 'toggleButton').click
+        @browser.divs(id: 'toggleButton')[1].click
         @automatic_reproduction_disabled = true
         # control volume
         sleep(0.5)
@@ -125,14 +127,14 @@ class YouTubePlayer
       # try to find just a proper playable
       string_for_searcher = get_string_for_searcher(song, hq: false) #: String
       @browser.text_field.value = string_for_searcher #: String
-      @browser.button(SEARCH_BUTTON_IDENTIFICATION[:key], SEARCH_BUTTON_IDENTIFICATION[:value]).click
+      @browser.button(id: SEARCH_BUTTON_IDENTIFICATION).click
       # wait until important elements gets loaded
       ready = false
       until(ready)
         tries = 0
         begin
           sleep(0.5)
-          divs = @browser.divs(SONG_TITLE_IDENTIFICATION[:key], SONG_TITLE_IDENTIFICATION[:value]).to_a
+          divs = @browser.divs(id: SONG_TITLE_IDENTIFICATION).to_a
         rescue
           if(tries == 0)
             sleep(0.5)
@@ -142,7 +144,7 @@ class YouTubePlayer
             @browser.refresh
             _ready = false
             until(_ready)
-              if(@browser.text_field.visible? rescue nil)
+              if(@browser.text_field.present? rescue nil)
                 _ready = true
                 sleep(0.75)
               end
@@ -151,7 +153,7 @@ class YouTubePlayer
             retry
           end
         end
-        if((divs.size >= 3) && (divs[2].visible?))
+        if((divs.size >= 3) && (divs[2].present?))
           ready = true
           sleep(0.25)
         end
@@ -165,7 +167,7 @@ class YouTubePlayer
         # disable automatic reproduction if needed
         if(!@automatic_reproduction_disabled)
           sleep(0.75)
-          @browser.div(:id, 'toggleButton').click
+          @browser.div(id: 'toggleButton').click
           @automatic_reproduction_disabled = true
           # control volume
           sleep(0.5)
@@ -187,7 +189,7 @@ class YouTubePlayer
   def do_the_song_finished_playing?
     # find the progress bar if not found yet
     if(!@progress_bar)
-      @progress_bar = @browser.element(:class, 'ytp-play-progress') rescue nil
+      @progress_bar = @browser.element(class: 'ytp-play-progress') rescue nil
     end
     # inspect the progress bar, if found
     if(@progress_bar && @progress_bar.style.match(/transform: scaleX\(1\)/))
@@ -199,7 +201,7 @@ class YouTubePlayer
 
   # Touches the play/pause button on the YT palyer, if found.
   def touch_play_pause_button
-    @browser.button(:class, 'ytp-play-button').click
+    @browser.button(class: 'ytp-play-button').click
     true
   rescue
     false
